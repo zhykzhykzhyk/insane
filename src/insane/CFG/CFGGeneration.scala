@@ -20,6 +20,99 @@ trait CFGGeneration extends CFGTreesDef { self: AnalysisComponent =>
   import icodes._
 
   val CFG = CFGTrees
+  
+  class CFGRegenerationPhase extends SubPhase {
+    val name = "Generating inter-procedure CFG"
+    
+    /*
+    class InlineCopier(entry: CFGVertex, exit: CFGVertex) extends FunctionCFGCopier {
+      override def copyStmt(stmt: CFGTrees.Statement): CFGTrees.Statement = {
+        stmt match {
+          case aam: CFG.AssignApplyMeth => {
+            aam
+          }
+          case _ => super.copyStmt(stmt)
+        }
+      }
+      
+      override def copyVertex() {
+        
+      }
+    }
+    
+    */
+    
+    def getInlinedCopy(fun: AbsFunction, caller: AbsFunction) = {
+      if (fun.icfg.isEmpty) {
+        doInline(fun)
+      }
+      
+      if (!fun.inlined) {
+        fun.inlined = true
+      }
+      
+      fun.icfg.get
+    }
+    
+    def doInline(fun: AbsFunction) {
+      fun.inlining = true
+      
+      var icfg = new FunctionCFG(
+          fun.cfg.symbol,
+          fun.cfg.args,
+          fun.cfg.retval,
+          fun.cfg.mainThisRef,
+          fun.cfg.isFlat,
+          fun.cfg.entry,
+          fun.cfg.exit
+      )
+      
+      fun.icfg = Some(icfg)
+      
+      for (e <- fun.cfg.graph.edges) {
+        e.label match {
+          case aam: CFG.AssignApplyMeth if callGraph.cToT.contains(aam) => {
+            var exist = false
+            for (target <- callGraph.cToT(aam)) {
+              declaredFunctions.get(target) match {
+                case Some(ifun) => {
+                  val cfg = getInlinedCopy(ifun, fun)
+                  exist = true
+                
+                  icfg += CFGEdge(e.v1, CFG.Skip, cfg.entry)
+                  
+                  for (e2 <- cfg.graph.edges) {
+                    icfg += e2
+                  }
+                  
+                  icfg += CFGEdge(cfg.exit, CFG.Skip, e.v2)
+                }
+                
+                case None => {}
+              }
+            }
+            
+            if (!exist) {
+              icfg += e
+            }
+          }
+          //case _: CFG.AssignApplyMeth => {}
+          case _ => icfg += e
+        }
+      }
+      
+      fun.icfg = Some(icfg)
+      fun.inlining = false
+    }
+    
+    def run() {
+      for (fun <- declaredFunctions.values) {
+        doInline(fun)
+        
+        dumpCFG(fun.icfg.get, uniqueFunctionName(fun.symbol))
+      }
+    }
+  }
 
   class CFGGenerationPhase extends SubPhase {
     val name = "Generating CFGs"

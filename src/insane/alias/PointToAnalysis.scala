@@ -1164,7 +1164,7 @@ trait PointToAnalysis extends PointToGraphsDefs with PointToEnvs with PointToLat
                 assert(edge != None, "We ended up precisely analyzing the CFG without an edge information, this can't happen since we need an edge to inline the CFG")
 
                 for (t <- resolvedTargets) {
-                  callGraph.addMethodCall(fun.symbol, t.cfg.symbol)
+                  callGraph.addMethodCall(fun.symbol, aam, t.cfg.symbol)
                 }
                 // 1) Remove current edge
                 val rEdge = edge.get
@@ -1285,7 +1285,7 @@ trait PointToAnalysis extends PointToGraphsDefs with PointToEnvs with PointToLat
                 var allMappedRets = Set[Node]()
 
                 for (t <- resolvedTargets) {
-                  callGraph.addMethodCall(fun.symbol, t.cfg.symbol)
+                  callGraph.addMethodCall(fun.symbol, aam, t.cfg.symbol)
                 }
 
                 val envs = resolvedTargets.map { case ResolvedTargetInfo(targetCFG, sig) =>

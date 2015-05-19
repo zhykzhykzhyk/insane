@@ -46,7 +46,8 @@ abstract class AnalysisComponent(pluginInstance: InsanePlugin, val reporter: Rep
     new ClassHierarchyPhase   andThen
 //    new TypeAnalysisPhase     andThen
     new PointToAnalysisPhase  andThen
-    new ChecksPhase
+    new ChecksPhase  andThen
+    new CFGRegenerationPhase
     //new PurityAnalysisPhase
 
   class AnalysisPhase(prev: Phase) extends StdPhase(prev) {

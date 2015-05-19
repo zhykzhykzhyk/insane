@@ -6,6 +6,7 @@ import CFG.{CFGEdge,CFGVertex}
 import utils._
 import utils.Graphs._
 import utils.Reporters._
+import scala.collection.mutable.{HashMap, MultiMap, Set}
 
 trait TypeAnalysis {
   self: AnalysisComponent =>
@@ -23,6 +24,7 @@ trait TypeAnalysis {
   class CallGraph extends MutableDirectedGraphImp[TAVertex, EdgeSimple[TAVertex]] {
     var cToG = Map[Symbol, Group]()
     var mToV = Map[Symbol, TAVertex]()
+    var cToT = new HashMap[CFG.AssignApplyMeth, Set[Symbol]] with MultiMap[CFG.AssignApplyMeth, Symbol]
 
     def addClass(s: Symbol): Group = {
       if (!(cToG contains s)) {
@@ -49,6 +51,11 @@ trait TypeAnalysis {
       val vTo   = addMethod(to)
 
       this += EdgeSimple[TAVertex](vFrom, vTo)
+    }
+    
+    def addMethodCall(from: Symbol, call: CFG.AssignApplyMeth, to: Symbol) {
+      cToT.addBinding(call, to)
+      addMethodCall(from, to)
     }
 
     def addUnknownTarget(from: Symbol) {
@@ -320,7 +327,7 @@ trait TypeAnalysis {
         f.callTargets += call -> (matches, info.isExhaustive)
 
         for (m <- matches) {
-          callGraph.addMethodCall(f.symbol, m)
+          callGraph.addMethodCall(f.symbol, call, m)
           simpleCallGraph        += (f.symbol -> (simpleCallGraph(f.symbol) + m))
           simpleReverseCallGraph += (m        -> (simpleReverseCallGraph(m) + f.symbol))
         }

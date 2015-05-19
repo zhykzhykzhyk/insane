@@ -24,7 +24,11 @@ trait Functions {
     lazy val cfg   = optCFG.getOrElse(new CFGConverterFromAST(this).getCFG)
 
     def setCFG(cfg: FunctionCFG) = optCFG = Some(cfg)
+    
+    var inlining   = false
+    var inlined    = false
 
+    var icfg       : Option[FunctionCFG] = None
     var ptCFGs     = Map[TypeSignature, (FunctionCFG, Boolean)]()
     var flatPTCFGs = Map[TypeSignature, FunctionCFG]()
 
