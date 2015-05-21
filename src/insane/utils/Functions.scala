@@ -117,7 +117,24 @@ trait Functions {
       res
     })
   }
+  
+  class Unionfind[T] {
 
+  def findroot(x: T): T = {
+    if(father(x) != x)
+      father(x) = findroot(father(x))
+     
+    father(x)
+  }
+  def union(x: T, y: T) {
+    if(!find(x,y))
+      father(x) = findroot(y)
+  }
+  def find(x: T, y: T): Boolean = {
+    findroot(x) == findroot(y)
+  }
+  var father = scala.collection.mutable.Map[T, T]();
+}
 
   final case class FunctionCFG(
     val symbol: Symbol,
@@ -129,7 +146,32 @@ trait Functions {
     override val exit: CFGVertex,
     override val graph: LabeledImmutableDirectedGraphImp[CFGTrees.Statement, CFGVertex, CFGEdge[CFGTrees.Statement]]
   ) extends ControlFlowGraph[CFGTrees.Statement](entry, exit, graph) {
-
+    def reduceSkip : FunctionCFG = {
+      var uf=new Unionfind[CFGVertex]();
+      for (e <- graph.E)
+      {
+        e.label match {
+          case CFG.Skip =>  
+            uf.union(e.v1, e.v2)          
+        }
+      }
+      
+      for (e <- graph.E)
+      {
+        e.label match {
+          case CFG.Skip =>  
+            this.-(e)    
+          case _ =>
+            if(e.v1!=uf.findroot(e.v1) || e.v2!=uf.findroot(e.v2))
+            {
+              this.+(uf.findroot(e.v1),e.label,uf.findroot(e.v2))
+              this.-(e)
+            }
+        }
+      }
+      val newcfg=new FunctionCFG(symbol,retval,args,mainThisRef,isFlat,uf.findroot(entry),uf.findroot(exit),graph)
+      newcfg.removeIsolatedVertices
+    }
     def this(symbol: Symbol,
              args: Seq[CFGTrees.Ref],
              retval: CFGTrees.Ref,
