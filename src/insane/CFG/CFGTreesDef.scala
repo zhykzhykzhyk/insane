@@ -94,12 +94,13 @@ trait CFGTreesDef extends ASTBindings { self: AnalysisComponent =>
                           val typeArgs: Seq[global.Tree] = Seq(),
                           val style: CallStyle = VirtualCall,
                           val excludedSymbols: Set[Symbol] = Set(),
-                          val inlinedIn: Set[(Symbol, TypeSignature)] = Set()) extends Statement {
+                          val inlinedIn: Set[(Symbol, TypeSignature)] = Set(),
+                          val id: UniqueID = nextID) extends Statement {
 
       def excludeSymbols(syms: Set[Symbol]) = {
         val newExcludedSymbols = excludedSymbols ++ syms.map(s => lookupFunction(s).flatMap(_.implOfMethod).getOrElse(s))
         if (newExcludedSymbols != excludedSymbols) {
-          new AssignApplyMeth(r, obj, meth, args, typeArgs, style, newExcludedSymbols, inlinedIn) setTreeFrom this
+          new AssignApplyMeth(r, obj, meth, args, typeArgs, style, newExcludedSymbols, inlinedIn, id) setTreeFrom this
         } else {
           this
         }

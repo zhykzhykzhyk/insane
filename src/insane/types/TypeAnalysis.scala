@@ -24,7 +24,7 @@ trait TypeAnalysis {
   class CallGraph extends MutableDirectedGraphImp[TAVertex, EdgeSimple[TAVertex]] {
     var cToG = Map[Symbol, Group]()
     var mToV = Map[Symbol, TAVertex]()
-    var cToT = new HashMap[CFG.AssignApplyMeth, Set[Symbol]] with MultiMap[CFG.AssignApplyMeth, Symbol]
+    var cToT = new HashMap[UniqueID, Set[Symbol]] with MultiMap[UniqueID, Symbol]
 
     def addClass(s: Symbol): Group = {
       if (!(cToG contains s)) {
@@ -53,8 +53,12 @@ trait TypeAnalysis {
       this += EdgeSimple[TAVertex](vFrom, vTo)
     }
     
+    def addMethodCall(call: CFG.AssignApplyMeth, to: Symbol) {
+      cToT.addBinding(call.id, to)   
+    }
+    
     def addMethodCall(from: Symbol, call: CFG.AssignApplyMeth, to: Symbol) {
-      cToT.addBinding(call, to)
+      addMethodCall(call, to)
       addMethodCall(from, to)
     }
 

@@ -71,9 +71,9 @@ trait CFGGeneration extends CFGTreesDef { self: AnalysisComponent =>
       
       for (e <- fun.cfg.graph.edges) {
         e.label match {
-          case aam: CFG.AssignApplyMeth if callGraph.cToT.contains(aam) => {
+          case aam: CFG.AssignApplyMeth => {
             var exist = false
-            for (target <- callGraph.cToT(aam)) {
+            for (target <- callGraph.cToT.getOrElse(aam.id, Seq(aam.meth))) {
               declaredFunctions.get(target) match {
                 case Some(ifun) => {
                   val cfg = getInlinedCopy(ifun, fun)
