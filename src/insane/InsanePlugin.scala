@@ -22,7 +22,7 @@ class InsanePlugin(val global: Global) extends Plugin {
   override val optionsHelp: Option[String] = Some(
     " Output Control:" + "\n" +
 //    "  --drawpt=name              Queries the DB and draw corresponding graph" + "\n" +
-    "  --ondemand=s1:s2          Only analyze the specified symbols and their dependencies, _ for all" + "\n" +
+//    "  --ondemand=s1:s2          Only analyze the specified symbols and their dependencies, _ for all" + "\n" +
     "  --dumpcfg=s1:s2           Dumps CFG for the given symbols, _ for all" + "\n" +
     "  --dumppt=s1:s2            Dumps Point-to graphs for the given symbols, _ for all" + "\n" +
 //    "  --debugfun=s1:s2          Debug given function symbols" + "\n" +
@@ -41,11 +41,11 @@ class InsanePlugin(val global: Global) extends Plugin {
     "  --openworld               Do not assume closed world" + "\n" +
     "  --considerpure=s1:s2      Mark certain methods as pure for the analysis" + "\n" +
     "  --considerarbitrary=s1:s2 Flag certain methods as unanalyzable, delaying their analysis" + "\n" +
-    "  --inlineStrategy=strat    Use a certain strategy for handling method calls" + "\n" +
-    "       Possible Strategies:" + "\n" +
-    "         - smart            Delay based on heuristic depending on the precision of a method call" + "\n" +
-    "         - inline           Always inline calls => \"full\" re-usability and efficiency" + "\n" +
-    "         - delay            Always delay the analysis =>  \"full\" precision" + "\n" +
+//    "  --inlineStrategy=strat    Use a certain strategy for handling method calls" + "\n" +
+//    "       Possible Strategies:" + "\n" +
+//    "         - smart            Delay based on heuristic depending on the precision of a method call" + "\n" +
+//    "         - inline           Always inline calls => \"full\" re-usability and efficiency" + "\n" +
+//    "         - delay            Always delay the analysis =>  \"full\" precision" + "\n" +
     "\n" +
     " Setting up the environment:" + "\n" +
     "  --config=cfg.xml          Use the provided xml file to configure the access to the database" + "\n" +
@@ -226,7 +226,10 @@ class InsanePlugin(val global: Global) extends Plugin {
       case _ =>
         error("Invalid option: " + option)
     }
-
+    
+    settings.onDemandMode = true
+    settings.onDemandFunctions = (SymbolList unapply "_").get
+    settings.inlineStrategy = settings.InlineStrategies.AlwaysDelay
     settings.postProcessOptions()
   }
 
