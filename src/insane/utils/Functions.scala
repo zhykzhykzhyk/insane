@@ -123,22 +123,24 @@ trait Functions {
   }
   
   class Unionfind[T] {
+    def find(x: T): T = {
+      if (father.getOrElse(x, Nil) != Nil) {
+        val root = find(father(x))
+        father(x) = root
+        root
+      } else {
+        x
+      }
+    }
+    
+    def union(x: T, y: T) {
+      val u = find(x)
+      val v = find(y)
+      if (u != v) father(u) = v
+    }
 
-  def findroot(x: T): T = {
-    if(father(x) != x)
-      father(x) = findroot(father(x))
-     
-    father(x)
+    var father = scala.collection.mutable.Map[T, T]();
   }
-  def union(x: T, y: T) {
-    if(!find(x,y))
-      father(x) = findroot(y)
-  }
-  def find(x: T, y: T): Boolean = {
-    findroot(x) == findroot(y)
-  }
-  var father = scala.collection.mutable.Map[T, T]();
-}
 
   final case class FunctionCFG(
     val symbol: Symbol,
@@ -150,32 +152,34 @@ trait Functions {
     override val exit: CFGVertex,
     override val graph: LabeledImmutableDirectedGraphImp[CFGTrees.Statement, CFGVertex, CFGEdge[CFGTrees.Statement]]
   ) extends ControlFlowGraph[CFGTrees.Statement](entry, exit, graph) {
+    
     def reduceSkip : FunctionCFG = {
-      var uf=new Unionfind[CFGVertex]();
-      for (e <- graph.E)
-      {
-        e.label match {
-          case CFG.Skip =>  
-            uf.union(e.v1, e.v2)          
-        }
+      var uf = new Unionfind[CFGVertex]();
+      
+      for (CFGEdge(v1, label, v2) <- graph.E) label match {
+        case CFG.Skip => uf.union(v1, v2)
+        case bb: CFG.BasicBlock if bb.stmts.find{_!=CFG.Skip}.isEmpty => uf.union(v1, v2)
+        case _ => {}
       }
       
-      for (e <- graph.E)
-      {
-        e.label match {
-          case CFG.Skip =>  
-            this.-(e)    
-          case _ =>
-            if(e.v1!=uf.findroot(e.v1) || e.v2!=uf.findroot(e.v2))
-            {
-              this.+(uf.findroot(e.v1),e.label,uf.findroot(e.v2))
-              this.-(e)
-            }
+      var newGraph = new FunctionCFG(symbol, args, retval, mainThisRef, isFlat, uf.find(entry), uf.find(exit))
+      
+      for (CFGEdge(v1, label, v2) <- graph.E) label match {
+        case CFG.Skip => {}
+        case bb: CFG.BasicBlock => {
+          val stmts = bb.stmts.filter{_!=CFG.Skip}
+          
+          if (!stmts.isEmpty) {
+            val newBB = new CFG.BasicBlock(stmts) setTreeFrom bb
+            newGraph += (uf.find(v1), newBB, uf.find(v2))
+          }
         }
+        case _ => newGraph += (uf.find(v1), label, uf.find(v2))
       }
-      val newcfg=new FunctionCFG(symbol,retval,args,mainThisRef,isFlat,uf.findroot(entry),uf.findroot(exit),graph)
-      newcfg.removeIsolatedVertices
+        
+      newGraph
     }
+    
     def this(symbol: Symbol,
              args: Seq[CFGTrees.Ref],
              retval: CFGTrees.Ref,
