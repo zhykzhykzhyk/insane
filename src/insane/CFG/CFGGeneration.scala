@@ -109,7 +109,7 @@ trait CFGGeneration extends CFGTreesDef { self: AnalysisComponent =>
       for (fun <- declaredFunctions.values) {
         doInline(fun)
         
-        dumpCFG(fun.icfg.get, uniqueFunctionName(fun.symbol))
+        dumpCFG(BasicBlocksBuilder.composeBlocks(fun.icfg.get.reduceSkip), uniqueFunctionName(fun.symbol))
       }
     }
   }
@@ -1257,19 +1257,23 @@ trait CFGGeneration extends CFGTreesDef { self: AnalysisComponent =>
     val excludeNothing: Predicate = { case _ => false }
 
     def composeBlocks(cfg: FunctionCFG, pred: Predicate = excludeNothing): FunctionCFG = {
-      cfg.copy(graph = composeBlocks(cfg.graph, pred))
+      cfg.copy(graph = composeBlocks(cfg.graph, pred, {
+        case cfg.entry => true
+        case cfg.exit => true
+        case _ => false
+      }))
     }
 
-    def composeBlocks(graph: Graph, pred: Predicate): Graph = {
+    def composeBlocks(graph: Graph, pred: Predicate, ec: CFGVertex => Boolean): Graph = {
       val exclude = pred orElse excludeNothing
 
       var newGraph = graph.mutable
 
       // We compact basic blocks together
-      for (v <- newGraph.V) (newGraph.inEdges(v), newGraph.outEdges(v)) match {
+      for (v <- newGraph.V if !ec(v)) (newGraph.inEdges(v), newGraph.outEdges(v)) match {
         case (ins, outs) if (ins.size == 1) && (outs.size == 1) =>
           (ins.head, outs.head) match {
-            case (in  @ CFGEdge(inFrom,   inLabel, inTo), out @ CFGEdge(outFrom, outLabel, outTo)) =>
+            case (in @ CFGEdge(inFrom, inLabel, inTo), out @ CFGEdge(outFrom, outLabel, outTo)) =>
               if (!(exclude(inLabel)) && !(exclude(outLabel))) {
                 val inStmts = inLabel match {
                   case bb: CFG.BasicBlock =>
