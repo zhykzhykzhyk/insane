@@ -469,6 +469,9 @@ trait PointToAnalysis extends PointToGraphsDefs with PointToEnvs with PointToLat
         // We combine the call signature of similar targets
         val targetsToConsider = targets.groupBy(_.sym).map{ case (sym, urs) => UnresolvedTargetInfo(sym, urs.map(_.sig).reduce(_ combine _)) }.toSet.filter(t => !excludedTargets(t.sym))
 
+        for (target <- targetsToConsider)
+           callGraph.addMethodCall(aam, target.sym)
+           
         analysisMode match {
           case PreciseAnalysis | ConditionalAnalysis =>
             val result = if (targets.isEmpty) {
@@ -534,8 +537,8 @@ trait PointToAnalysis extends PointToGraphsDefs with PointToEnvs with PointToLat
                         missingTargets += sym
                         None
 
-                      case Some(cfg) if cfg.isBottom =>
-                        None
+                      //case Some(cfg) if cfg.isBottom =>
+                      //  None
                       case Some(cfg) =>
                         Some(ResolvedTargetInfo(cfg, sigUsed))
                     }
@@ -1082,6 +1085,10 @@ trait PointToAnalysis extends PointToGraphsDefs with PointToEnvs with PointToLat
               case None =>
                 getMatchingMethods(aam.meth, style, sig)
             })
+            
+            for (target <- targets) {
+              callGraph.addMethodCall(aam, target.sym)
+            }
 
             if (!targets.filterNot(ut => aam.excludedSymbols(ut.sym)).isEmpty) {
               settings.ifDebug {
@@ -1164,7 +1171,7 @@ trait PointToAnalysis extends PointToGraphsDefs with PointToEnvs with PointToLat
                 assert(edge != None, "We ended up precisely analyzing the CFG without an edge information, this can't happen since we need an edge to inline the CFG")
 
                 for (t <- resolvedTargets) {
-                  callGraph.addMethodCall(fun.symbol, aam, t.cfg.symbol)
+                  callGraph.addMethodCall(fun.symbol, /* aam, */ t.cfg.symbol)
                 }
                 // 1) Remove current edge
                 val rEdge = edge.get
@@ -1285,7 +1292,7 @@ trait PointToAnalysis extends PointToGraphsDefs with PointToEnvs with PointToLat
                 var allMappedRets = Set[Node]()
 
                 for (t <- resolvedTargets) {
-                  callGraph.addMethodCall(fun.symbol, aam, t.cfg.symbol)
+                  callGraph.addMethodCall(fun.symbol, /* aam, */ t.cfg.symbol)
                 }
 
                 val envs = resolvedTargets.map { case ResolvedTargetInfo(targetCFG, sig) =>
